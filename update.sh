@@ -151,7 +151,7 @@ remove_unwanted_packages() {
 update_golang() {
     if [[ -d ./feeds/packages/lang/golang ]]; then
         \rm -rf ./feeds/packages/lang/golang
-        git clone --depth 1 $GOLANG_REPO -b $GOLANG_BRANCH ./feeds/packages/lang/golang
+        git clone --depth 1 $GOLANG_REPO -b 24.x ./feeds/packages/lang/golang
     fi
 }
 
