@@ -68,17 +68,16 @@ update_feeds() {
         echo "src-git small8 https://github.com/kenzok8/small-package" >>"$BUILD_DIR/$FEEDS_CONF"
     fi
 
+    # 新增：添加 openlist 源
+    if ! grep -q "openlist" "$BUILD_DIR/$FEEDS_CONF"; then
+        [ -z "$(tail -c 1 "$BUILD_DIR/$FEEDS_CONF")" ] || echo "" >>"$BUILD_DIR/$FEEDS_CONF"
+        echo "src-git openlist https://github.com/sbwml/luci-app-openlist" >>"$BUILD_DIR/$FEEDS_CONF"
+    fi
+
     # 添加bpf.mk解决更新报错
     if [ ! -f "$BUILD_DIR/include/bpf.mk" ]; then
         touch "$BUILD_DIR/include/bpf.mk"
     fi
-
-    # 切换nss-packages源
-    # if grep -q "nss_packages" "$BUILD_DIR/$FEEDS_CONF"; then
-    #     sed -i '/nss_packages/d' "$BUILD_DIR/$FEEDS_CONF"
-    #     [ -z "$(tail -c 1 "$BUILD_DIR/$FEEDS_CONF")" ] || echo "" >>"$BUILD_DIR/$FEEDS_CONF"
-    #     echo "src-git nss_packages https://github.com/LiBwrt/nss-packages.git" >>"$BUILD_DIR/$FEEDS_CONF"
-    # fi
 
     # 更新 feeds
     ./scripts/feeds clean
@@ -176,6 +175,9 @@ install_feeds() {
             if [[ $(basename "$dir") == "small8" ]]; then
                 install_small8
                 install_fullconenat
+            elif [[ $(basename "$dir") == "openlist" ]]; then
+                # 安装 openlist feed
+                ./scripts/feeds install -p openlist -f luci-app-openlist
             else
                 ./scripts/feeds install -f -ap $(basename "$dir")
             fi
