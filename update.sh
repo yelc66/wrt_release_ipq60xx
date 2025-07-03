@@ -63,7 +63,6 @@ update_feeds() {
 
     # 检查并添加 small-package 源
     if ! grep -q "small-package" "$BUILD_DIR/$FEEDS_CONF"; then
-        # 确保文件以换行符结尾
         [ -z "$(tail -c 1 "$BUILD_DIR/$FEEDS_CONF")" ] || echo "" >>"$BUILD_DIR/$FEEDS_CONF"
         echo "src-git small8 https://github.com/kenzok8/small-package" >>"$BUILD_DIR/$FEEDS_CONF"
     fi
@@ -159,18 +158,18 @@ install_small8() {
     ./scripts/feeds install -p small8 -f xray-core xray-plugin dns2tcp dns2socks haproxy hysteria \
         naiveproxy shadowsocks-rust sing-box v2ray-core v2ray-geodata v2ray-geoview v2ray-plugin \
         tuic-client chinadns-ng ipt2socks tcping trojan-plus simple-obfs shadowsocksr-libev \
-        luci-app-passwall alist luci-app-alist smartdns luci-app-smartdns v2dat mosdns luci-app-mosdns \
+        luci-app-passwall smartdns luci-app-smartdns v2dat mosdns luci-app-mosdns \
         adguardhome luci-app-adguardhome ddns-go luci-app-ddns-go taskd luci-lib-xterm luci-lib-taskd \
         luci-app-store quickstart luci-app-quickstart luci-app-istorex luci-app-cloudflarespeedtest \
         luci-theme-argon netdata luci-app-netdata lucky luci-app-lucky luci-app-openclash luci-app-homeproxy \
         luci-app-amlogic nikki luci-app-nikki tailscale luci-app-tailscale oaf open-app-filter luci-app-oaf \
         easytier luci-app-easytier msd_lite luci-app-msd_lite cups luci-app-cupsd
+        # 注意：移除了 alist 和 luci-app-alist，因为将使用 openlist 替代
 }
 
 install_feeds() {
     ./scripts/feeds update -i
     for dir in $BUILD_DIR/feeds/*; do
-        # 检查是否为目录并且不以 .tmp 结尾，并且不是软链接
         if [ -d "$dir" ] && [[ ! "$dir" == *.tmp ]] && [ ! -L "$dir" ]; then
             if [[ $(basename "$dir") == "small8" ]]; then
                 install_small8
