@@ -749,6 +749,19 @@ add_gecoosac() {
     fi
 }
 
+add_openlist2() {
+    local repo_url="https://github.com/sbwml/luci-app-openlist2.git"
+    local target_dir="$BUILD_DIR/package/luci-app-openlist2"
+
+    echo "正在添加 luci-app-openlist2..."
+    rm -rf "$target_dir" 2>/dev/null
+
+    if ! git clone --depth 1 "$repo_url" "$target_dir"; then
+        echo "错误：从 $repo_url 克隆 luci-app-openlist2 仓库失败" >&2
+        exit 1
+    fi
+}
+
 fix_easytier() {
     local easytier_path="$BUILD_DIR/package/feeds/small8/luci-app-easytier/luasrc/model/cbi/easytier.lua"
     if [ -d "${easytier_path%/*}" ] && [ -f "$easytier_path" ]; then
@@ -1025,6 +1038,7 @@ main() {
     update_oaf_deconfig
     add_timecontrol
     add_gecoosac
+    add_openlist2
     add_quickfile
     update_lucky
     fix_rust_compile_error
