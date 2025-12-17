@@ -184,7 +184,7 @@ install_small8() {
         luci-app-passwall v2dat mosdns luci-app-mosdns adguardhome luci-app-adguardhome ddns-go \
         luci-app-ddns-go taskd luci-lib-xterm luci-lib-taskd luci-app-store quickstart \
         luci-app-quickstart luci-app-istorex luci-app-cloudflarespeedtest netdata luci-app-netdata \
-        lucky luci-app-lucky luci-app-openclash luci-app-homeproxy luci-app-amlogic nikki luci-app-nikki \
+        luci-app-openclash luci-app-homeproxy luci-app-amlogic nikki luci-app-nikki \
         tailscale luci-app-tailscale oaf open-app-filter luci-app-oaf easytier luci-app-easytier \
         msd_lite luci-app-msd_lite cups luci-app-cupsd
 }
@@ -566,6 +566,20 @@ update_dnsmasq_conf() {
     fi
 }
 
+# 配置 Attended Sysupgrade 使用 ImmortalWrt 服务器
+fix_attendedsysupgrade_server() {
+    local asu_dir="$BUILD_DIR/feeds/luci/applications/luci-app-attendedsysupgrade"
+    local config_file="$asu_dir/root/etc/config/attendedsysupgrade"
+
+    if [ -d "$asu_dir" ] && [ -f "$config_file" ]; then
+        echo "正在配置 Attended Sysupgrade 使用 ImmortalWrt 服务器..."
+        # 替换默认的 OpenWrt ASU 服务器为 ImmortalWrt 服务器
+        sed -i "s|https://sysupgrade.openwrt.org|https://sysupgrade.kyarucloud.moe|g" "$config_file"
+        sed -i "s|http://sysupgrade.openwrt.org|https://sysupgrade.kyarucloud.moe|g" "$config_file"
+        echo "Attended Sysupgrade 服务器已配置为 ImmortalWrt 专用服务器"
+    fi
+}
+
 # 更新版本
 update_package() {
     local dir=$(find "$BUILD_DIR/package" \( -type d -o -type l \) -name "$1")
@@ -760,6 +774,22 @@ add_openlist2() {
         echo "错误：从 $repo_url 克隆 luci-app-openlist2 仓库失败" >&2
         exit 1
     fi
+}
+
+add_lucky_official() {
+    local repo_url="https://github.com/gdy666/luci-app-lucky.git"
+    local target_dir="$BUILD_DIR/package/luci-app-lucky"
+
+    echo "正在添加 gdy666 官方 luci-app-lucky..."
+    rm -rf "$target_dir" 2>/dev/null
+
+    if ! git clone --depth 1 "$repo_url" "$target_dir"; then
+        echo "错误：从 $repo_url 克隆 luci-app-lucky 仓库失败" >&2
+        exit 1
+    fi
+
+    # 官方仓库包含了lucky和luci-app-lucky两个包
+    echo "lucky 官方版本已成功添加"
 }
 
 fix_easytier() {
@@ -1032,6 +1062,7 @@ main() {
     update_menu_location
     fix_compile_coremark
     update_dnsmasq_conf
+    fix_attendedsysupgrade_server
     add_backup_info_to_sysupgrade
     update_mosdns_deconfig
     fix_quickstart
@@ -1040,7 +1071,8 @@ main() {
     add_gecoosac
     add_openlist2
     add_quickfile
-    update_lucky
+    add_lucky_official
+    # update_lucky  # 已替换为官方版本，不再需要从patches安装
     fix_rust_compile_error
     update_smartdns
     update_diskman
