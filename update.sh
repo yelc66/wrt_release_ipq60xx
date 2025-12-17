@@ -566,19 +566,9 @@ update_dnsmasq_conf() {
     fi
 }
 
-# 配置 Attended Sysupgrade 使用 ImmortalWrt 服务器
-fix_attendedsysupgrade_server() {
-    local asu_dir="$BUILD_DIR/feeds/luci/applications/luci-app-attendedsysupgrade"
-    local config_file="$asu_dir/root/etc/config/attendedsysupgrade"
-
-    if [ -d "$asu_dir" ] && [ -f "$config_file" ]; then
-        echo "正在配置 Attended Sysupgrade 使用 ImmortalWrt 服务器..."
-        # 替换默认的 OpenWrt ASU 服务器为 ImmortalWrt 服务器
-        sed -i "s|https://sysupgrade.openwrt.org|https://sysupgrade.kyarucloud.moe|g" "$config_file"
-        sed -i "s|http://sysupgrade.openwrt.org|https://sysupgrade.kyarucloud.moe|g" "$config_file"
-        echo "Attended Sysupgrade 服务器已配置为 ImmortalWrt 专用服务器"
-    fi
-}
+# 注意：fix_attendedsysupgrade_server 已移除
+# 原因：VIKINGYFE/immortalwrt 是定制固件，没有对应的 ASU 服务器
+# Attended Sysupgrade 无法为定制固件工作，应该在配置文件中禁用
 
 # 更新版本
 update_package() {
@@ -1062,7 +1052,6 @@ main() {
     update_menu_location
     fix_compile_coremark
     update_dnsmasq_conf
-    fix_attendedsysupgrade_server
     add_backup_info_to_sysupgrade
     update_mosdns_deconfig
     fix_quickstart
