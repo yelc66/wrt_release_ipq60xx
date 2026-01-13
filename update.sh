@@ -1040,7 +1040,7 @@ main() {
     add_gecoosac
     add_openlist2
     add_quickfile
-    update_lucky
+  #  update_lucky
     fix_rust_compile_error
     update_smartdns
     update_diskman
