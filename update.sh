@@ -184,7 +184,7 @@ install_small8() {
         luci-app-passwall v2dat mosdns luci-app-mosdns adguardhome luci-app-adguardhome ddns-go \
         luci-app-ddns-go taskd luci-lib-xterm luci-lib-taskd luci-app-store quickstart \
         luci-app-quickstart luci-app-istorex luci-app-cloudflarespeedtest netdata luci-app-netdata \
-        lucky luci-app-lucky luci-app-openclash luci-app-homeproxy luci-app-amlogic nikki luci-app-nikki \
+        luci-app-openclash luci-app-homeproxy luci-app-amlogic nikki luci-app-nikki \
         tailscale luci-app-tailscale oaf open-app-filter luci-app-oaf easytier luci-app-easytier \
         msd_lite luci-app-msd_lite cups luci-app-cupsd
 }
@@ -762,6 +762,19 @@ add_openlist2() {
     fi
 }
 
+add_lucky() {
+    local repo_url="https://github.com/gdy666/luci-app-lucky.git"
+    local target_dir="$BUILD_DIR/package/luci-app-lucky"
+
+    echo "正在添加 luci-app-lucky..."
+    rm -rf "$target_dir" 2>/dev/null
+
+    if ! git clone --depth 1 "$repo_url" "$target_dir"; then
+        echo "错误：从 $repo_url 克隆 luci-app-lucky 仓库失败" >&2
+        exit 1
+    fi
+}
+
 fix_easytier() {
     local easytier_path="$BUILD_DIR/package/feeds/small8/luci-app-easytier/luasrc/model/cbi/easytier.lua"
     if [ -d "${easytier_path%/*}" ] && [ -f "$easytier_path" ]; then
@@ -1039,6 +1052,7 @@ main() {
     add_timecontrol
     add_gecoosac
     add_openlist2
+    add_lucky
     add_quickfile
   #  update_lucky
     fix_rust_compile_error
