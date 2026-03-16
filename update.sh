@@ -582,7 +582,7 @@ add_openlist2() {
 }
 
 add_nikki() {
-    local repo_url="https://github.com/kenzok8/small.git"
+    local repo_url="https://github.com/nikkinikki-org/OpenWrt-nikki.git"
     local tmp_dir
     tmp_dir=$(mktemp -d)
 
