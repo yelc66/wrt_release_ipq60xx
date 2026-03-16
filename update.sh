@@ -557,7 +557,6 @@ add_timecontrol() {
 }
 
 
-
 add_openlist2() {
     local repo_url="https://github.com/sbwml/luci-app-openlist2.git"
     local target_dir="$BUILD_DIR/package/luci-app-openlist2"
@@ -761,6 +760,27 @@ remove_tweaked_packages() {
     fi
 }
 
+install_libubox_cmake_patch() {
+    local libubox_dir="$BUILD_DIR/package/libs/libubox"
+    local patch_src="$BASE_PATH/patches/999-libubox-demote-format-nonliteral.patch"
+    local patch_dst="$libubox_dir/patches/999-libubox-demote-format-nonliteral.patch"
+    if [ -d "$libubox_dir" ] && [ -f "$patch_src" ]; then
+        mkdir -p "$libubox_dir/patches"
+        install -Dm644 "$patch_src" "$patch_dst"
+        echo "已安装 libubox format-nonliteral 修复补丁"
+    fi
+}
+
+fix_pbr_ip_forward() {
+    local pbr_init="$BUILD_DIR/feeds/packages/net/pbr/files/pbr.init"
+    if [ -d "${pbr_init%/*}" ] && [ -f "$pbr_init" ]; then
+        if ! grep -q '\[ -n "$enabled" \] && \[ -n "$strict_enforcement" \]' "$pbr_init"; then
+            sed -i 's/\[ -n "$strict_enforcement" \]/[ -n "$enabled" ] \&\& [ -n "$strict_enforcement" ]/g' "$pbr_init"
+            echo "已修复 pbr stop_forward() IP 转发问题"
+        fi
+    fi
+}
+
 update_argon() {
     local repo_url="https://github.com/ZqinKing/luci-theme-argon.git"
     local dst_theme_path="$BUILD_DIR/feeds/luci/themes/luci-theme-argon"
@@ -821,6 +841,8 @@ main() {
     set_nginx_default_config
     update_uwsgi_limit_as
     update_argon
+    install_libubox_cmake_patch
+    fix_pbr_ip_forward
     install_feeds
     update_script_priority
     update_package "runc" "releases" "v1.2.6"
