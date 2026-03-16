@@ -556,17 +556,7 @@ add_timecontrol() {
     fi
 }
 
-add_gecoosac() {
-    local gecoosac_dir="$BUILD_DIR/package/openwrt-gecoosac"
-    local repo_url="https://github.com/lwb1978/openwrt-gecoosac.git"
-    # 删除旧的目录（如果存在）
-    rm -rf "$gecoosac_dir" 2>/dev/null
-    echo "正在添加 openwrt-gecoosac..."
-    if ! git clone --depth 1 "$repo_url" "$gecoosac_dir"; then
-        echo "错误：从 $repo_url 克隆 openwrt-gecoosac 仓库失败" >&2
-        exit 1
-    fi
-}
+
 
 add_openlist2() {
     local repo_url="https://github.com/sbwml/luci-app-openlist2.git"
@@ -821,7 +811,6 @@ main() {
     update_dnsmasq_conf
     add_backup_info_to_sysupgrade
     add_timecontrol
-    add_gecoosac
     add_openlist2
     add_nikki
     add_lucky
