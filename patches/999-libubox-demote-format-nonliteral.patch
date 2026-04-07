@@ -1,8 +1,0 @@
---- a/CMakeLists.txt
-+++ b/CMakeLists.txt
-@@ -7,7 +7,7 @@ OPTION(BUILD_LUA "Build Lua plugin" ON)
- OPTION(BUILD_EXAMPLES "Build examples" ON)
- OPTION(USTREAM_SSL "Build ustream-ssl" ON)
-
--ADD_DEFINITIONS(-Wformat -Werror=format-security -Werror=format-nonliteral)
-+ADD_DEFINITIONS(-Wformat -Werror=format-security -Wno-error=format-nonliteral)
