@@ -36,7 +36,7 @@ COMMIT_HASH=$4
 
 FEEDS_CONF="feeds.conf.default"
 GOLANG_REPO="https://github.com/sbwml/packages_lang_golang"
-GOLANG_BRANCH="25.x"
+GOLANG_BRANCH="26.x"
 THEME_SET="argon"
 LAN_ADDR="192.168.1.1"
 
@@ -594,16 +594,58 @@ add_nikki() {
     rm -rf "$tmp_dir"
 }
 
-add_lucky() {
+update_lucky() {
     local repo_url="https://github.com/gdy666/luci-app-lucky.git"
     local target_dir="$BUILD_DIR/package/luci-app-lucky"
 
     echo "正在添加 luci-app-lucky..."
     rm -rf "$target_dir" 2>/dev/null
 
-    if ! git clone --depth 1 "$repo_url" "$target_dir"; then
-        echo "错误：从 $repo_url 克隆 luci-app-lucky 仓库失败" >&2
+    local tmp_dir
+    tmp_dir=$(mktemp -d)
+
+    if ! git clone --depth 1 --filter=blob:none --no-checkout "$repo_url" "$tmp_dir"; then
+        echo "错误：从 $repo_url 克隆仓库失败" >&2
+        rm -rf "$tmp_dir"
         exit 1
+    fi
+
+    pushd "$tmp_dir" >/dev/null
+    git sparse-checkout init --cone
+    git sparse-checkout set luci-app-lucky lucky
+    git checkout --quiet
+    popd >/dev/null
+
+    mkdir -p "$target_dir"
+    cp -rf "$tmp_dir/luci-app-lucky" "$target_dir/luci-app-lucky"
+    cp -rf "$tmp_dir/lucky" "$target_dir/lucky"
+    rm -rf "$tmp_dir"
+
+    local lucky_conf="$target_dir/lucky/files/luckyuci"
+    if [ -f "$lucky_conf" ]; then
+        sed -i "s/option enabled '1'/option enabled '0'/g" "$lucky_conf"
+        sed -i "s/option logger '1'/option logger '0'/g" "$lucky_conf"
+    fi
+
+    local version
+    version=$(find "$BASE_PATH/patches" -name "lucky_*.tar.gz" -printf "%f\n" | head -n 1 | sed -n 's/^lucky_\(.*\)_Linux.*$/\1/p')
+    if [ -z "$version" ]; then
+        echo "Warning: 未找到 lucky 补丁文件，跳过版本注入。" >&2
+        return 0
+    fi
+
+    local makefile_path="$target_dir/lucky/Makefile"
+    if [ ! -f "$makefile_path" ]; then
+        echo "Warning: lucky Makefile not found. Skipping." >&2
+        return 0
+    fi
+
+    echo "正在注入 lucky 本地二进制 v${version} 到 Makefile..."
+    local patch_line="\\t[ -f \$(TOPDIR)/../patches/lucky_${version}_Linux_\$(LUCKY_ARCH)_wanji.tar.gz ] && install -Dm644 \$(TOPDIR)/../patches/lucky_${version}_Linux_\$(LUCKY_ARCH)_wanji.tar.gz \$(PKG_BUILD_DIR)/\$(PKG_NAME)_\$(PKG_VERSION)_Linux_\$(LUCKY_ARCH).tar.gz"
+    if grep -q "Build/Prepare" "$makefile_path"; then
+        sed -i "/Build\\/Prepare/a\\$patch_line" "$makefile_path"
+        sed -i '/wget/d' "$makefile_path"
+        echo "lucky Makefile 更新完成。"
     fi
 }
 
@@ -833,7 +875,7 @@ main() {
     add_timecontrol
     add_openlist2
     add_nikki
-    add_lucky
+    update_lucky
     add_quickfile
     fix_rust_compile_error
     update_smartdns
