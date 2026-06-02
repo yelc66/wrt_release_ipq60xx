@@ -814,6 +814,44 @@ install_libubox_cmake_patch() {
     fi
 }
 
+fix_kmod_iptables_provides() {
+    local netfilter_mk="$BUILD_DIR/package/kernel/linux/modules/netfilter.mk"
+
+    if [ ! -f "$netfilter_mk" ]; then
+        return 0
+    fi
+
+    # 如果 kmod-iptables 不存在（旧内核），无需处理
+    if ! grep -q "KernelPackage.iptables" "$netfilter_mk"; then
+        return 0
+    fi
+
+    # 已修复则跳过
+    if grep -q "PROVIDES.*kmod-nf-ipt" "$netfilter_mk"; then
+        echo "kmod-iptables PROVIDES already set, skipping"
+        return 0
+    fi
+
+    echo "Adding PROVIDES:=kmod-nf-ipt kmod-nf-ipt6 to kmod-iptables..."
+
+    # Format: define KernelPackage/iptables
+    if grep -qE "^define KernelPackage/iptables$" "$netfilter_mk"; then
+        sed -i '/^define KernelPackage\/iptables$/a\  PROVIDES:=kmod-nf-ipt kmod-nf-ipt6' "$netfilter_mk"
+        echo "kmod-iptables PROVIDES fix applied"
+        return 0
+    fi
+
+    # Format: $(eval $(call KernelPackage,iptables,...
+    if grep -q "call KernelPackage,iptables" "$netfilter_mk"; then
+        sed -i '/call KernelPackage,iptables/{n;/PROVIDES/!s/^\(.*SUBMENU.*\)$/\1\n  PROVIDES:=kmod-nf-ipt kmod-nf-ipt6,\\/}' "$netfilter_mk"
+        echo "kmod-iptables PROVIDES fix applied (eval format)"
+        return 0
+    fi
+
+    echo "Warning: could not apply kmod-iptables PROVIDES fix" >&2
+    return 0
+}
+
 fix_pbr_ip_forward() {
     local pbr_init="$BUILD_DIR/feeds/packages/net/pbr/files/pbr.init"
     if [ -d "${pbr_init%/*}" ] && [ -f "$pbr_init" ]; then
@@ -886,6 +924,7 @@ main() {
     update_argon
     install_libubox_cmake_patch
     fix_pbr_ip_forward
+    fix_kmod_iptables_provides
     install_feeds
     update_script_priority
     update_package "runc" "releases" "v1.2.6"
