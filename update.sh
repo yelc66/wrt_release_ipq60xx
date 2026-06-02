@@ -583,12 +583,13 @@ add_nikki() {
     fi
     cd "$tmp_dir"
     git sparse-checkout init --cone
-    git sparse-checkout set nikki luci-app-nikki
+    git sparse-checkout set nikki luci-app-nikki mihomo-meta
     git checkout --quiet
 
-    rm -rf "$BUILD_DIR/package/nikki" "$BUILD_DIR/package/luci-app-nikki"
+    rm -rf "$BUILD_DIR/package/nikki" "$BUILD_DIR/package/luci-app-nikki" "$BUILD_DIR/package/mihomo-meta"
     cp -r "$tmp_dir/nikki" "$BUILD_DIR/package/nikki"
     cp -r "$tmp_dir/luci-app-nikki" "$BUILD_DIR/package/luci-app-nikki"
+    cp -r "$tmp_dir/mihomo-meta" "$BUILD_DIR/package/mihomo-meta"
 
     cd "$BUILD_DIR"
     rm -rf "$tmp_dir"
