@@ -1,6 +1,5 @@
 首先安装 Linux 系统，推荐 Ubuntu LTS  
-上游仓库<img width="1702" height="1276" alt="7867e44ae4e4546a985d6513773d5171" src="https://github.com/user-attachments/assets/bf7d39f7-4d67-4c4d-b2bb-531de7c6bcab" />
-
+上游 https://github.com/ZqinKing/wrt_releas
 安装编译依赖  
 sudo apt -y update  
 sudo apt -y full-upgrade  
