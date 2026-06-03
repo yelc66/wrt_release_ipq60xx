@@ -814,6 +814,38 @@ install_libubox_cmake_patch() {
     fi
 }
 
+fix_netfilter_kmod_clash() {
+    # On Linux 6.18, both kmod-iptables and kmod-nf-ipt claim ip_tables.ko and
+    # x_tables.ko, causing check_data_file_clashes to fail.
+    # Fix 1: add "lt 6.12" version guard to nf_add calls so those .ko files are
+    #         only assigned to NF_IPT-m (kmod-nf-ipt's FILES) on kernels < 6.12.
+    # Fix 2: update kmod-nf-ipt DEPENDS to also exclude kmod-iptables on 6.18.
+    local include_mk="$BUILD_DIR/include/netfilter.mk"
+    local netfilter_mk="$BUILD_DIR/package/kernel/linux/modules/netfilter.mk"
+
+    if [ ! -f "$include_mk" ] || [ ! -f "$netfilter_mk" ]; then
+        echo "Warning: netfilter.mk not found, skipping fix_netfilter_kmod_clash" >&2
+        return 0
+    fi
+
+    # Already patched?
+    if grep -q "ip_tables,lt 6.12" "$include_mk"; then
+        echo "fix_netfilter_kmod_clash already applied, skipping"
+        return 0
+    fi
+
+    echo "Applying fix_netfilter_kmod_clash..."
+
+    # Fix include/netfilter.mk: add lt 6.12 version condition to ip_tables and x_tables nf_add
+    sed -i 's|$(call nf_add,NF_IPT,CONFIG_IP_NF_IPTABLES, $(P_V4)ip_tables),|$(call nf_add,NF_IPT,CONFIG_IP_NF_IPTABLES, $(P_V4)ip_tables,lt 6.12),|g' "$include_mk"
+    sed -i 's|$(call nf_add,NF_IPT,CONFIG_NETFILTER_XTABLES, $(P_XT)x_tables),|$(call nf_add,NF_IPT,CONFIG_NETFILTER_XTABLES, $(P_XT)x_tables,lt 6.12),|g' "$include_mk"
+
+    # Fix package/kernel/linux/modules/netfilter.mk: exclude kmod-iptables dep on 6.18 too
+    sed -i 's|DEPENDS:=+!LINUX_6_12:kmod-iptables|DEPENDS:=+(!(LINUX_6_12\|\|LINUX_6_18)):kmod-iptables|g' "$netfilter_mk"
+
+    echo "fix_netfilter_kmod_clash applied"
+}
+
 fix_pbr_ip_forward() {
     local pbr_init="$BUILD_DIR/feeds/packages/net/pbr/files/pbr.init"
     if [ -d "${pbr_init%/*}" ] && [ -f "$pbr_init" ]; then
@@ -886,6 +918,7 @@ main() {
     update_argon
     install_libubox_cmake_patch
     fix_pbr_ip_forward
+    fix_netfilter_kmod_clash
     install_feeds
     update_script_priority
     update_package "runc" "releases" "v1.2.6"
