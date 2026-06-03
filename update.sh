@@ -815,33 +815,46 @@ install_libubox_cmake_patch() {
 }
 
 fix_netfilter_kmod_clash() {
-    # On Linux 6.18, both kmod-iptables and kmod-nf-ipt claim ip_tables.ko and
-    # x_tables.ko, causing check_data_file_clashes to fail.
-    # Fix 1: add "lt 6.12" version guard to nf_add calls so those .ko files are
-    #         only assigned to NF_IPT-m (kmod-nf-ipt's FILES) on kernels < 6.12.
-    # Fix 2: update kmod-nf-ipt DEPENDS to also exclude kmod-iptables on 6.18.
+    # 背景（依据上游源码，非臆测）：
+    # 从 Linux 6.18 起，内核把 legacy iptables 拆分为 *_LEGACY 选项，
+    # ip_tables.ko / x_tables.ko / ip6_tables.ko 这几个 legacy 模块只有在
+    # kmod-iptables（KCONFIG 打开 CONFIG_*_LEGACY）被选中时才会被编译。
+    #
+    # 上游 package/kernel/linux/modules/netfilter.mk 设计：
+    #   - kmod-iptables (@!LINUX_6_12)        FILES: ip_tables.ko x_tables.ko
+    #   - kmod-nf-ipt   (+!LINUX_6_12:kmod-iptables)  FILES: $(NF_IPT-m)
+    #   - kmod-nf-ipt6  (+kmod-nf-ipt)        FILES: $(NF_IPT6-m) 含 ip6_tables.ko
+    # 而 include/netfilter.mk 无条件把 ip_tables / x_tables 加进 NF_IPT-m，
+    # 于是在 6.18 上 kmod-nf-ipt 和 kmod-iptables 同时拥有 ip_tables.ko /
+    # x_tables.ko，触发 check_data_file_clashes 冲突。
+    #
+    # 正确修法（只动“谁打包这些 .ko”，不动“谁编译这些 .ko”）：
+    #   给 include/netfilter.mk 里 ip_tables / x_tables 的 nf_add 加 "lt 6.18"
+    #   版本守卫——内核 < 6.18（如 libwrt 的 6.12）时仍由 kmod-nf-ipt 打包，
+    #   >= 6.18 时交给 kmod-iptables 打包，冲突消失。
+    #
+    # 注意：绝不能改 kmod-nf-ipt 的 DEPENDS 去掉对 kmod-iptables 的依赖。
+    # 之前那样做会导致 6.18 上 kmod-iptables 不被拉入 → CONFIG_*_LEGACY 不开
+    # → ip6_tables.ko 根本不编译 → kmod-nf-ipt6 报 "ip6_tables.ko is missing"。
     local include_mk="$BUILD_DIR/include/netfilter.mk"
-    local netfilter_mk="$BUILD_DIR/package/kernel/linux/modules/netfilter.mk"
 
-    if [ ! -f "$include_mk" ] || [ ! -f "$netfilter_mk" ]; then
-        echo "Warning: netfilter.mk not found, skipping fix_netfilter_kmod_clash" >&2
+    if [ ! -f "$include_mk" ]; then
+        echo "Warning: include/netfilter.mk not found, skipping fix_netfilter_kmod_clash" >&2
         return 0
     fi
 
-    # Already patched?
-    if grep -q "ip_tables,lt 6.12" "$include_mk"; then
+    # 已修复则跳过
+    if grep -q "ip_tables,lt 6.18" "$include_mk"; then
         echo "fix_netfilter_kmod_clash already applied, skipping"
         return 0
     fi
 
     echo "Applying fix_netfilter_kmod_clash..."
 
-    # Fix include/netfilter.mk: add lt 6.12 version condition to ip_tables and x_tables nf_add
-    sed -i 's|$(call nf_add,NF_IPT,CONFIG_IP_NF_IPTABLES, $(P_V4)ip_tables),|$(call nf_add,NF_IPT,CONFIG_IP_NF_IPTABLES, $(P_V4)ip_tables,lt 6.12),|g' "$include_mk"
-    sed -i 's|$(call nf_add,NF_IPT,CONFIG_NETFILTER_XTABLES, $(P_XT)x_tables),|$(call nf_add,NF_IPT,CONFIG_NETFILTER_XTABLES, $(P_XT)x_tables,lt 6.12),|g' "$include_mk"
-
-    # Fix package/kernel/linux/modules/netfilter.mk: exclude kmod-iptables dep on 6.18 too
-    sed -i 's|DEPENDS:=+!LINUX_6_12:kmod-iptables|DEPENDS:=+(!(LINUX_6_12\|\|LINUX_6_18)):kmod-iptables|g' "$netfilter_mk"
+    # 仅给 ip_tables / x_tables 的 nf_add 增加 "lt 6.18" 版本守卫。
+    # 不修改 NF_IPT6 的 ip6_tables（kmod-iptables 不打包它，无冲突，需保留）。
+    sed -i 's|$(call nf_add,NF_IPT,CONFIG_IP_NF_IPTABLES, $(P_V4)ip_tables),|$(call nf_add,NF_IPT,CONFIG_IP_NF_IPTABLES, $(P_V4)ip_tables,lt 6.18),|g' "$include_mk"
+    sed -i 's|$(call nf_add,NF_IPT,CONFIG_NETFILTER_XTABLES, $(P_XT)x_tables),|$(call nf_add,NF_IPT,CONFIG_NETFILTER_XTABLES, $(P_XT)x_tables,lt 6.18),|g' "$include_mk"
 
     echo "fix_netfilter_kmod_clash applied"
 }
