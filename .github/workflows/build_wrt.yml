@@ -1,23 +1,12 @@
 name: Build WRT
-run-name: Build - ${{ inputs.model }}
+run-name: Build - JDCloud AX6600 ImmortalWrt
 
 on:
   workflow_dispatch:
-    inputs:
-      model:
-        required: true
-        description: Device Model
-        type: choice
-        default: jdcloud_ipq60xx_immwrt
-        options:
-          - jdcloud_ipq60xx_immwrt
-          - jdcloud_ipq60xx_libwrt
-          - redmi_ax5_immwrt
-          - zn_m2_immwrt
-          - zn_m2_libwrt
 
 env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  MODEL: jdcloud_ipq60xx_immwrt
 
 jobs:
   build:
@@ -50,7 +39,7 @@ jobs:
           echo "BUILD_DATE=$BUILD_DATE" >> $GITHUB_ENV
 
       - name: Pre Clone
-        run: ./pre_clone_action.sh ${{ inputs.model }}
+        run: ./pre_clone_action.sh ${{ env.MODEL }}
 
       - name: Cache Dependencies
         uses: actions/cache@v4
@@ -71,15 +60,13 @@ jobs:
           fi
 
       - name: Build Firmware
-        run: ./build.sh ${{ inputs.model }}
+        run: ./build.sh ${{ env.MODEL }}
 
       - name: Delete Old Cache
         run: |
-          # 获取缓存列表并删除
           gh cache list --key ${{ matrix.os }}-${{ hashFiles('**/repo_flag') }}- --json key --jq '.[] | .key' | while read -r key; do
             gh cache delete "$key"
           done
-          # 输出缓存状态
           echo "========cache status========"
           echo "ccache: $(du -sh ./action_build/.ccache | cut -f 1)"
           echo "staging: $(du -sh ./action_build/staging_dir | cut -f 1)"
@@ -95,5 +82,5 @@ jobs:
       - name: Upload Firmware
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.BUILD_DATE }}_${{ inputs.model }}
+          name: ${{ env.BUILD_DATE }}_${{ env.MODEL }}
           path: ./firmware/*.*
