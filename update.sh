@@ -295,11 +295,14 @@ apply_hash_fixes() {
         "skip" \
         "opkg"
 
-    fix_hash_value \
-        "$BUILD_DIR/package/qca-nss/qca-nss-phy/Makefile" \
-        "26f29e2f40c83b2bf836def858d3278eb02909439e5a40631dd238facf352fa7" \
-        "skip" \
-        "qca-nss-phy"
+    # qca-nss 系列源码镜像服务器上的归档已失效，git-archive 回退产物哈希与
+    # Makefile 中固定值均不符，统一跳过校验
+    if [ -d "$BUILD_DIR/package/qca-nss" ]; then
+        for makefile in "$BUILD_DIR"/package/qca-nss/*/Makefile; do
+            sed -i -E 's/^PKG_MIRROR_HASH:=[0-9a-f]+$/PKG_MIRROR_HASH:=skip/' "$makefile"
+        done
+        echo "已跳过 qca-nss 系列包的镜像哈希校验。"
+    fi
 }
 
 update_ath11k_fw() {
