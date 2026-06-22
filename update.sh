@@ -105,7 +105,7 @@ remove_unwanted_packages() {
     local packages_net=(
         "haproxy" "xray-core" "xray-plugin" "dns2socks" "alist" "hysteria"
         "mosdns" "adguardhome" "ddns-go" "naiveproxy" "shadowsocks-rust"
-        "sing-box" "v2ray-core" "v2ray-geodata" "v2ray-plugin" "tuic-client"
+        "sing-box" "v2ray-core" "v2ray-plugin" "tuic-client"
         "chinadns-ng" "ipt2socks" "tcping" "trojan-plus" "simple-obfs" "shadowsocksr-libev"
         "dae" "mihomo" "geoview" "tailscale" "open-app-filter" "msd_lite"
     )
@@ -731,6 +731,11 @@ add_daed() {
     if [ -f "$daed_makefile" ]; then
         sed -i 's/npm install -g pnpm ;/npm install -g pnpm@9 ;/' "$daed_makefile"
     fi
+
+    # feeds/packages 和 feeds/luci 自带的官方 daed/luci-app-daed 会在 install_feeds()
+    # 阶段以 "core package" 覆盖掉 package/dae 下我们克隆的版本，且官方 luci-app-daed
+    # 依赖官方 daed 提供的 daed-geoip/daed-geosite，与 QiuSimons 版不兼容，必须删掉
+    rm -rf "$BUILD_DIR/feeds/packages/net/daed" "$BUILD_DIR/feeds/luci/applications/luci-app-daed"
 }
 
 add_quickfile() {
