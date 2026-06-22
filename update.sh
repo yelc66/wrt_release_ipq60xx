@@ -98,7 +98,7 @@ update_feeds() {
 remove_unwanted_packages() {
     local luci_packages=(
         "luci-app-passwall" "luci-app-ddns-go" "luci-app-rclone" "luci-app-ssr-plus"
-        "luci-app-vssr" "luci-app-daed" "luci-app-dae" "luci-app-alist" "luci-app-homeproxy"
+        "luci-app-vssr" "luci-app-dae" "luci-app-alist" "luci-app-homeproxy"
         "luci-app-haproxy-tcp" "luci-app-openclash" "luci-app-mihomo" "luci-app-appfilter"
         "luci-app-msd_lite"
     )
@@ -106,8 +106,8 @@ remove_unwanted_packages() {
         "haproxy" "xray-core" "xray-plugin" "dns2socks" "alist" "hysteria"
         "mosdns" "adguardhome" "ddns-go" "naiveproxy" "shadowsocks-rust"
         "sing-box" "v2ray-core" "v2ray-geodata" "v2ray-plugin" "tuic-client"
-        "chinadns-ng" "ipt2socks" "tcping" "trojan-plus" "simple-obfs" "shadowsocksr-libev" 
-        "dae" "daed" "mihomo" "geoview" "tailscale" "open-app-filter" "msd_lite"
+        "chinadns-ng" "ipt2socks" "tcping" "trojan-plus" "simple-obfs" "shadowsocksr-libev"
+        "dae" "mihomo" "geoview" "tailscale" "open-app-filter" "msd_lite"
     )
     local packages_utils=(
         "cups"
@@ -711,6 +711,28 @@ update_diskman() {
     fi
 }
 
+add_daed() {
+    local repo_url="https://github.com/QiuSimons/luci-app-daed.git"
+    local repo_branch="kix"
+    local target_dir="$BUILD_DIR/package/dae"
+
+    echo "正在添加 luci-app-daed..."
+    rm -rf "$target_dir" 2>/dev/null
+
+    if ! git clone --depth 1 -b "$repo_branch" "$repo_url" "$target_dir"; then
+        echo "错误：从 $repo_url 克隆 luci-app-daed 仓库失败" >&2
+        exit 1
+    fi
+
+    # 上游 daed/Makefile 用 `npm install -g pnpm` 安装最新 pnpm(v11+)，
+    # 但其 pnpm-lock.yaml 是用 pnpm v9 生成的，frozen-lockfile 模式下会报
+    # specifiers 不匹配错误，固定装 pnpm v9 规避(对应上游 issue #61)
+    local daed_makefile="$target_dir/daed/Makefile"
+    if [ -f "$daed_makefile" ]; then
+        sed -i 's/npm install -g pnpm ;/npm install -g pnpm@9 ;/' "$daed_makefile"
+    fi
+}
+
 add_quickfile() {
     local repo_url="https://github.com/sbwml/luci-app-quickfile.git"
     local target_dir="$BUILD_DIR/package/emortal/quickfile"
@@ -919,6 +941,7 @@ main() {
     update_dnsmasq_conf
     add_backup_info_to_sysupgrade
     add_timecontrol
+    add_daed
     add_openlist2
     add_nikki
     update_lucky
