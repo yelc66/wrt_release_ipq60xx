@@ -286,7 +286,14 @@ apply_hash_fixes() {
         "$BUILD_DIR/package/feeds/packages/smartdns/Makefile" \
         "a1c084dcc4fb7f87641d706b70168fc3c159f60f37d4b7eac6089ae68f0a18a1" \
         "ab7d303a538871ae4a70ead2e90d35e24fcc36bc20f5b6c5d963a3e283ea43b1" \
-        "smartdns"    
+        "smartdns"
+
+    # sources.openwrt.org 返回 404，git-archive 回退产物哈希与 Makefile 中固定值不符
+    fix_hash_value \
+        "$BUILD_DIR/package/system/opkg/Makefile" \
+        "41fb2c79ce6014e28f7dd0cd8c65efe803986278f2587d1d4681883d8847d87c" \
+        "skip" \
+        "opkg"
 }
 
 update_ath11k_fw() {
