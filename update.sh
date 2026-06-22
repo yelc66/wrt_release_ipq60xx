@@ -294,6 +294,12 @@ apply_hash_fixes() {
         "41fb2c79ce6014e28f7dd0cd8c65efe803986278f2587d1d4681883d8847d87c" \
         "skip" \
         "opkg"
+
+    fix_hash_value \
+        "$BUILD_DIR/package/qca-nss/qca-nss-phy/Makefile" \
+        "26f29e2f40c83b2bf836def858d3278eb02909439e5a40631dd238facf352fa7" \
+        "skip" \
+        "qca-nss-phy"
 }
 
 update_ath11k_fw() {
