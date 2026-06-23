@@ -746,6 +746,12 @@ add_daed() {
     local daed_makefile="$target_dir/daed/Makefile"
     if [ -f "$daed_makefile" ]; then
         sed -i 's/npm install -g pnpm ;/npm install -g pnpm@9 ;/' "$daed_makefile"
+
+        # Build/Prepare 用 `;` 串联所有命令(git clone/go mod/pnpm install/pnpm build)，
+        # 任意一步失败都会被忽略，最终只会在编译期看到语焉不详的
+        # "pattern web: cannot embed directory web: contains no embeddable files"。
+        # 加上 set -e 让真正的失败原因(网络/pnpm/go mod 等)在 Prepare 阶段就报出来
+        sed -i '/^define Build\/Prepare$/,/^endef$/ s/^\t( \\$/\t( \\\n\t\tset -e ; \\/' "$daed_makefile"
     fi
 
     # feeds/packages 和 feeds/luci 自带的官方 daed/luci-app-daed 会在 install_feeds()
