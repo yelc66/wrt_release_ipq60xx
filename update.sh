@@ -98,16 +98,16 @@ update_feeds() {
 remove_unwanted_packages() {
     local luci_packages=(
         "luci-app-passwall" "luci-app-ddns-go" "luci-app-rclone" "luci-app-ssr-plus"
-        "luci-app-vssr" "luci-app-daed" "luci-app-dae" "luci-app-alist" "luci-app-homeproxy"
+        "luci-app-vssr" "luci-app-dae" "luci-app-alist" "luci-app-homeproxy"
         "luci-app-haproxy-tcp" "luci-app-openclash" "luci-app-mihomo" "luci-app-appfilter"
         "luci-app-msd_lite"
     )
     local packages_net=(
         "haproxy" "xray-core" "xray-plugin" "dns2socks" "alist" "hysteria"
         "mosdns" "adguardhome" "ddns-go" "naiveproxy" "shadowsocks-rust"
-        "sing-box" "v2ray-core" "v2ray-geodata" "v2ray-plugin" "tuic-client"
-        "chinadns-ng" "ipt2socks" "tcping" "trojan-plus" "simple-obfs" "shadowsocksr-libev" 
-        "dae" "daed" "mihomo" "geoview" "tailscale" "open-app-filter" "msd_lite"
+        "sing-box" "v2ray-core" "v2ray-plugin" "tuic-client"
+        "chinadns-ng" "ipt2socks" "tcping" "trojan-plus" "simple-obfs" "shadowsocksr-libev"
+        "dae" "mihomo" "geoview" "tailscale" "open-app-filter" "msd_lite"
     )
     local packages_utils=(
         "cups"
@@ -286,7 +286,23 @@ apply_hash_fixes() {
         "$BUILD_DIR/package/feeds/packages/smartdns/Makefile" \
         "a1c084dcc4fb7f87641d706b70168fc3c159f60f37d4b7eac6089ae68f0a18a1" \
         "ab7d303a538871ae4a70ead2e90d35e24fcc36bc20f5b6c5d963a3e283ea43b1" \
-        "smartdns"    
+        "smartdns"
+
+    # sources.openwrt.org 返回 404，git-archive 回退产物哈希与 Makefile 中固定值不符
+    fix_hash_value \
+        "$BUILD_DIR/package/system/opkg/Makefile" \
+        "41fb2c79ce6014e28f7dd0cd8c65efe803986278f2587d1d4681883d8847d87c" \
+        "skip" \
+        "opkg"
+
+    # qca-nss 系列源码镜像服务器上的归档已失效，git-archive 回退产物哈希与
+    # Makefile 中固定值均不符，统一跳过校验
+    if [ -d "$BUILD_DIR/package/qca-nss" ]; then
+        for makefile in "$BUILD_DIR"/package/qca-nss/*/Makefile; do
+            sed -i -E 's/^PKG_MIRROR_HASH:=[0-9a-f]+$/PKG_MIRROR_HASH:=skip/' "$makefile"
+        done
+        echo "已跳过 qca-nss 系列包的镜像哈希校验。"
+    fi
 }
 
 update_ath11k_fw() {
@@ -711,6 +727,39 @@ update_diskman() {
     fi
 }
 
+add_daed() {
+    local repo_url="https://github.com/QiuSimons/luci-app-daed.git"
+    local repo_branch="kix"
+    local target_dir="$BUILD_DIR/package/dae"
+
+    echo "正在添加 luci-app-daed..."
+    rm -rf "$target_dir" 2>/dev/null
+
+    if ! git clone --depth 1 -b "$repo_branch" "$repo_url" "$target_dir"; then
+        echo "错误：从 $repo_url 克隆 luci-app-daed 仓库失败" >&2
+        exit 1
+    fi
+
+    # 上游 daed/Makefile 用 `npm install -g pnpm` 安装最新 pnpm(v11+)，
+    # 但其 pnpm-lock.yaml 是用 pnpm v9 生成的，frozen-lockfile 模式下会报
+    # specifiers 不匹配错误，固定装 pnpm v9 规避(对应上游 issue #61)
+    local daed_makefile="$target_dir/daed/Makefile"
+    if [ -f "$daed_makefile" ]; then
+        sed -i 's/npm install -g pnpm ;/npm install -g pnpm@9 ;/' "$daed_makefile"
+
+        # Build/Prepare 用 `;` 串联所有命令(git clone/go mod/pnpm install/pnpm build)，
+        # 任意一步失败都会被忽略，最终只会在编译期看到语焉不详的
+        # "pattern web: cannot embed directory web: contains no embeddable files"。
+        # 加上 set -e 让真正的失败原因(网络/pnpm/go mod 等)在 Prepare 阶段就报出来
+        sed -i '/^define Build\/Prepare$/,/^endef$/ s/^\t( \\$/\t( \\\n\t\tset -e ; \\/' "$daed_makefile"
+    fi
+
+    # feeds/packages 和 feeds/luci 自带的官方 daed/luci-app-daed 会在 install_feeds()
+    # 阶段以 "core package" 覆盖掉 package/dae 下我们克隆的版本，且官方 luci-app-daed
+    # 依赖官方 daed 提供的 daed-geoip/daed-geosite，与 QiuSimons 版不兼容，必须删掉
+    rm -rf "$BUILD_DIR/feeds/packages/net/daed" "$BUILD_DIR/feeds/luci/applications/luci-app-daed"
+}
+
 add_quickfile() {
     local repo_url="https://github.com/sbwml/luci-app-quickfile.git"
     local target_dir="$BUILD_DIR/package/emortal/quickfile"
@@ -919,6 +968,7 @@ main() {
     update_dnsmasq_conf
     add_backup_info_to_sysupgrade
     add_timecontrol
+    add_daed
     add_openlist2
     add_nikki
     update_lucky
